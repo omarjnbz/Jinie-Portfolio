@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jinie Bhatnagar — DJ & Producer · Delhi → The World</title>
+  <meta name="description" content="DJ & Producer Jinie Bhatnagar. House · Afro House · Progressive · Deep House. Delhi → The World." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;1,400&family=Inter:wght@200;300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --rail: clamp(2rem, 10vw, 12rem);
+      --bg: #060606;
+      --font-serif: 'Cormorant Garamond', serif;
+      --font-sans: 'Inter', sans-serif;
+      --accent: #e5e5e5;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ===== Single fixed WebGL canvas behind all content ===== */
+    #gl { position: fixed; inset: 0; z-index: 0; display: block; }
+
+    /* ===== Loader ===== */
+    #loader {
+      position: fixed; inset: 0; z-index: 200; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1.4rem; transition: opacity 1s cubic-bezier(0.25,1,0.5,1);
+    }
+    #loader.hidden { opacity: 0; pointer-events: none; }
+    #loader .mark {
+      font-family: var(--font-serif); font-weight: 300; font-style: italic;
+      font-size: clamp(2rem, 6vw, 3.6rem); letter-spacing: -0.01em; text-align: center;
+    }
+    #loader .sub { font-size: 0.65rem; letter-spacing: 0.38em; text-transform: uppercase; color: rgba(255,255,255,0.25); }
+    #loader .bar { width: clamp(160px, 24vw, 280px); height: 1px; background: rgba(255,255,255,0.12); position: relative; overflow: hidden; }
+    #loader .bar i { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--accent); transition: width .25s ease; }
+    #loader .pct { font-size: 0.7rem; letter-spacing: 0.4em; color: rgba(255,255,255,0.4); }
+
+    /* ===== Film grain ===== */
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 150;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      opacity: 0.04; mix-blend-mode: overlay;
+    }
+
+    /* ===== Editorial frame ===== */
+    .editorial-frame { position: fixed; inset: 0; margin: 1.5rem; border: 1px solid rgba(255,255,255,0.05); pointer-events: none; z-index: 90; }
+    .editorial-frame::before, .editorial-frame::after { content: ""; position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.03); }
+    .editorial-frame::before { left: var(--rail); }
+    .editorial-frame::after { right: var(--rail); }
+
+    /* ===== Scroll progress ===== */
+    .progress { position: fixed; top: 0; left: 0; height: 2px; width: 0%; background: linear-gradient(90deg, transparent, var(--accent)); z-index: 100; }
+
+    /* ===== Chapters give scroll length; stages pin overlays ===== */
+    .chap { position: relative; height: var(--h, 320vh); }
+    .chap-hero { --h: 300vh; }
+    .chap-narrative { --h: 380vh; }
+    .chap-gallery { --h: 620vh; }
+    .stage {
+      position: sticky; top: 0; height: 100vh; width: 100%; overflow: hidden;
+      background: transparent; /* WebGL shows through */
+    }
+    /* gentle vignette for depth */
+    .stage::after {
+      content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, transparent 38%, rgba(6,6,6,0.55) 100%);
+    }
+    .splice { height: 16vh; }
+
+    /* ===== Hero typography ===== */
+    .copy {
+      position: absolute; left: var(--rail); top: 50%; transform: translateY(-50%);
+      z-index: 5; display: grid; padding-left: 2rem; will-change: opacity, transform;
+    }
+    .kicker { font-size: clamp(0.7rem,0.9vw,0.85rem); letter-spacing: 0.5em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem; }
+    .word { font-family: var(--font-serif); font-size: clamp(3rem,9vw,8.5rem); font-weight: 300; letter-spacing: -0.01em; line-height: 0.9; text-transform: uppercase; white-space: nowrap; }
+    .word em { font-style: italic; text-transform: lowercase; }
+    .drum { display: grid; perspective: 800px; }
+    .drum .word { grid-area: 1 / 1; transform-style: preserve-3d; backface-visibility: hidden; will-change: transform, opacity; }
+
+    /* ===== Narrative ===== */
+    .narrative-wrapper { position: absolute; left: calc(var(--rail) + 2rem); top: 52%; transform: translateY(-50%); max-width: clamp(290px,38vw,560px); z-index: 5; display: flex; flex-direction: column; gap: 2.5rem; }
+    .narrative-meta { font-size: 0.7rem; letter-spacing: 0.3em; color: rgba(255,255,255,0.3); text-transform: uppercase; display: flex; align-items: center; gap: 0.75rem; }
+    .narrative-meta::before { content: ""; width: 5px; height: 5px; background: #ff3b30; border-radius: 50%; }
+    .narrative-block { display: flex; flex-direction: column; gap: 2.25rem; }
+    .narrative-p {
+      font-size: clamp(1rem,1.35vw,1.2rem); font-weight: 300; line-height: 1.65;
+      color: rgba(255,255,255,0.12); transform-origin: left center;
+      filter: blur(4px); will-change: filter, opacity, transform, color;
+      transition: color .5s ease, filter .5s ease, opacity .5s ease, transform .5s ease;
+    }
+    .narrative-p.active { color: #fff !important; filter: blur(0) !important; opacity: 1 !important; }
+
+    /* ===== Gallery captions ===== */
+    .gcaps { position: absolute; left: calc(var(--rail) + 2rem); bottom: 4rem; z-index: 5; height: 1.5rem; }
+    .gcap { position: absolute; left: 0; bottom: 0; white-space: nowrap; opacity: 0; font-size: clamp(0.65rem,0.8vw,0.75rem); letter-spacing: 0.35em; text-transform: uppercase; color: rgba(255,255,255,0.75); border-left: 2px solid rgba(255,255,255,0.4); padding-left: 1rem; will-change: opacity; }
+
+    /* ===== Scroll hint ===== */
+    .scroll-hint { position: absolute; left: calc(var(--rail) + 2rem); bottom: 4rem; z-index: 4; font-size: 0.7rem; letter-spacing: 0.4em; text-transform: uppercase; color: rgba(255,255,255,0.4); animation: bob 2.5s cubic-bezier(0.25,1,0.5,1) infinite; transition: opacity .5s ease; }
+    .scroll-hint.hide { opacity: 0; animation: none; pointer-events: none; }
+    @keyframes bob { 0%,100%{transform:translateY(0);opacity:.3} 50%{transform:translateY(6px);opacity:.8} }
+
+    /* ===== Outro ===== */
+    .outro { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1rem; padding: 2rem; position: relative; z-index: 10; background: linear-gradient(180deg, transparent, var(--bg) 30%, var(--bg)); }
+    .end-stamp { font-size: clamp(0.65rem,0.8vw,0.75rem); letter-spacing: 0.5em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 0.5rem; }
+    .outro h2 { font-family: var(--font-serif); font-size: clamp(2rem,5vw,4.5rem); font-weight: 300; letter-spacing: -0.01em; }
+    .outro h2 em { font-style: italic; }
+    .outro p { color: #888; font-size: 0.85rem; letter-spacing: 0.15em; margin-top: 1rem; }
+    .reveal { opacity: 0; transform: translateY(30px); filter: blur(10px); transition: all 1.2s cubic-bezier(0.25,1,0.5,1); }
+    .reveal.in { opacity: 1; transform: none; filter: blur(0); }
+
+    /* ===== Genres ticker ===== */
+    .ticker-wrap { position: relative; z-index: 10; overflow: hidden; border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(6,6,6,0.85); backdrop-filter: blur(8px); padding: 14px 0; }
+    .ticker { display: flex; gap: 0; white-space: nowrap; animation: tick 22s linear infinite; }
+    .ticker-item { font-size: 0.68rem; letter-spacing: 0.38em; text-transform: uppercase; color: rgba(255,255,255,0.45); padding: 0 2.5rem; }
+    .ticker-item.dot { color: rgba(255,255,255,0.18); padding: 0 0.5rem; letter-spacing: 0; }
+    @keyframes tick { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+    @media (max-width: 768px) {
+      :root { --rail: 1.5rem; }
+      .editorial-frame { margin: 0.75rem; }
+      .chap-hero { --h: 240vh; } .chap-narrative { --h: 300vh; } .chap-gallery { --h: 480vh; }
+      .copy, .narrative-wrapper { padding-left: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .narrative-p { transition: opacity .3s ease; filter: none !important; }
+      .scroll-hint { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="gl"></canvas>
+
+  <div id="fileWarn" style="display:none; position:fixed; inset:0; z-index:300; background:#060606; color:#fff; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; text-align:center; padding:2rem; font-family:'Inter',sans-serif;">
+    <div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:clamp(2rem,6vw,3.2rem);">Open me over http</div>
+    <p style="max-width:520px; line-height:1.7; color:#aaa; font-size:0.95rem;">This page uses JavaScript modules + WebGL, which browsers block from <code>file://</code>. The photos and 3D won't load this way. Run a tiny local server from this folder and open the <code>http://</code> link instead:</p>
+    <pre style="background:#111; border:1px solid #333; padding:1rem 1.4rem; border-radius:8px; color:#0f0; font-size:0.85rem; text-align:left;">cd "this folder"
+python3 -m http.server 8098
+# then open http://localhost:8098/jinie-editorial-3d.html</pre>
+  </div>
+
+  <div id="loader">
+    <div class="mark">Jinie</div>
+    <div class="sub">DJ &amp; Producer · Delhi</div>
+    <div class="bar"><i id="loadBar"></i></div>
+    <div class="pct" id="loadPct">LOADING · 0</div>
+  </div>
+
+  <div class="editorial-frame"></div>
+  <div class="progress" id="progress"></div>
+
+  <section class="chap chap-hero" id="heroChap">
+    <div class="stage">
+      <div class="copy" id="heroCopy">
+        <span class="kicker">DJ &amp; Producer · Delhi → The World</span>
+        <div class="drum" id="heroDrum">
+          <span class="word">Jinie — <em>st.</em></span>
+          <span class="word">Behind the Decks</span>
+        </div>
+      </div>
+      <div class="scroll-hint" id="heroHint">Scroll to explore ↓</div>
+    </div>
+  </section>
+
+  <div class="ticker-wrap">
+    <div class="ticker">
+      <span class="ticker-item">House</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Afro House</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Progressive</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Deep House</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Melodic</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Psy</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Commercial</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">EDM</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Delhi → The World</span><span class="ticker-item dot">✦</span>
+      <!-- duplicate for seamless loop -->
+      <span class="ticker-item">House</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Afro House</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Progressive</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Deep House</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Melodic</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Psy</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Commercial</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">EDM</span><span class="ticker-item dot">✦</span>
+      <span class="ticker-item">Delhi → The World</span><span class="ticker-item dot">✦</span>
+    </div>
+  </div>
+
+  <div class="splice"></div>
+
+  <section class="chap chap-narrative" id="narrativeChap">
+    <div class="stage">
+      <div class="narrative-wrapper">
+        <div class="narrative-meta">House · Afro House · Progressive · Deep House · Melodic</div>
+        <div class="narrative-block">
+          <p class="narrative-p" data-step="0">Born in Delhi and schooled by the underground, Jinie Bhatnagar moves between the warm pulse of Afro House and the hypnotic architecture of Progressive — a sound that feels as at home in a rooftop sunrise set as it does in a dark basement.</p>
+          <p class="narrative-p" data-step="1">Her selections pull from the deeper wells: Stephan Bodzin's cosmic tension, Hernan Cattaneo's long-form storytelling, the melodic edge of Guy J. Every mix is a slow reveal — patience over punch, texture over volume.</p>
+          <p class="narrative-p" data-step="2">Delhi to the world. The intention is always the same — create a space where the music holds the room and every track feels like it was always meant to follow the one before it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="splice"></div>
+
+  <section class="chap chap-gallery" id="galleryChap">
+    <div class="stage">
+      <div class="gcaps">
+        <span class="gcap" data-i="0">01 // Behind the Decks</span>
+        <span class="gcap" data-i="1">02 // Low Angle — Pioneer CDJ</span>
+        <span class="gcap" data-i="2">03 // Soft Light — Studio Session</span>
+        <span class="gcap" data-i="3">04 // The Booth — Deep Olive Tone</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="outro">
+    <div class="reveal" id="outroReveal">
+      <div class="end-stamp">DJ Jinie · Delhi → The World · 2026</div>
+      <h2>Let's make <em>noise</em>.</h2>
+      <p style="margin-top:0.5rem;">BOOKINGS &amp; COLLABS</p>
+      <p><a href="mailto:surbhibhatnagar96605@gmail.com" style="color:inherit;border-bottom:1px solid rgba(255,255,255,0.25);padding-bottom:2px;letter-spacing:0.1em;">surbhibhatnagar96605@gmail.com</a></p>
+      <p style="margin-top:0.5rem;font-size:0.8rem;">+91 98217 40778 &nbsp;·&nbsp; <a href="https://instagram.com/jinie_bhatnagar" target="_blank" style="color:inherit;">@jinie_bhatnagar</a></p>
+    </div>
+  </section>
+
+  <script>
+    if (location.protocol === 'file:') {
+      var w = document.getElementById('fileWarn'); w.style.display = 'flex';
+      var l = document.getElementById('loader'); if (l) l.style.display = 'none';
+    }
+  </script>
+
+  <script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+
+  <script type="module">
+  import * as THREE from 'three';
+
+  const clamp = (v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+  const remap = (p,a,b)=>clamp((p-a)/(b-a));
+  const smooth = t => t*t*(3-2*t);
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isMobile = matchMedia('(max-width: 768px)').matches || /Mobi|Android/i.test(navigator.userAgent);
+  const $ = id => document.getElementById(id);
+
+  /* ---------------- renderer / scene / camera ---------------- */
+  const canvas = $('gl');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.outputColorSpace = THREE.LinearSRGBColorSpace; // shader does the sRGB encode
+
+  const scene = new THREE.Scene();
+  const FOV = 42;
+  const camera = new THREE.PerspectiveCamera(FOV, innerWidth/innerHeight, 0.1, 200);
+  camera.position.set(0, 0, 6);
+
+  /* ---------------- photo shader (cover-fit + DOF blur + chroma) ---------------- */
+  const VERT = `
+    varying vec2 vUv;
+    void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
+  `;
+  const FRAG = `
+    precision highp float;
+    varying vec2 vUv;
+    uniform sampler2D uTex;
+    uniform float uOpacity, uFocus, uImgA, uPlaneA, uExposure, uChroma;
+    const float R = 0.010;          // max blur radius (uv)
+    vec2 cover(vec2 uv){
+      if(uImgA > uPlaneA){ float f = uPlaneA/uImgA; uv.x = (uv.x-0.5)*f + 0.5; }
+      else               { float f = uImgA/uPlaneA; uv.y = (uv.y-0.5)*f + 0.5; }
+      return uv;
+    }
+    vec3 sampleAt(vec2 uv){
+      // chromatic aberration scaled toward edges
+      vec2 dir = uv - 0.5;
+      float ca = min(uChroma * dot(dir,dir), 0.006);
+      float r = texture2D(uTex, uv + dir*ca).r;
+      float g = texture2D(uTex, uv).g;
+      float b = texture2D(uTex, uv - dir*ca).b;
+      return vec3(r,g,b);
+    }
+    void main(){
+      vec2 uv = cover(vUv);
+      vec3 col;
+      if(uFocus < 0.02){
+        col = sampleAt(uv);
+      } else {
+        // 13-tap ring blur driven by focus
+        float rad = uFocus * R;
+        col = sampleAt(uv) * 0.20;
+        float w = 0.0;
+        for(int i=0;i<12;i++){
+          float a = float(i) * 0.5235988;        // 30deg steps
+          float ring = (i<6) ? 0.55 : 1.0;
+          vec2 off = vec2(cos(a), sin(a)) * rad * ring;
+          col += sampleAt(uv + off) * 0.0667;
+          w += 0.0667;
+        }
+        col = col / (0.20 + w);
+      }
+      col *= uExposure;
+      col = pow(clamp(col,0.0,1.0), vec3(1.0/2.2)); // linear -> sRGB
+      // soft edge feather so framed photos don't have hard borders
+      vec2 e = smoothstep(0.0, 0.04, vUv) * smoothstep(0.0, 0.04, 1.0 - vUv);
+      float edge = e.x * e.y;
+      gl_FragColor = vec4(col, uOpacity * edge);
+    }
+  `;
+  function makePhoto(tex, imgA){
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTex:{value:tex}, uOpacity:{value:0}, uFocus:{value:0},
+        uImgA:{value:imgA}, uPlaneA:{value:1}, uExposure:{value:1.06}, uChroma:{value:0.0}
+      },
+      vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1,1,1,1), mat);
+    mesh.userData.imgA = imgA;
+    return mesh;
+  }
+  function setPlaneSize(mesh, w, h){ mesh.scale.set(w, h, 1); mesh.material.uniforms.uPlaneA.value = w/h; }
+  // size that fully covers the viewport at given camera distance
+  function coverSize(dist){
+    const h = 2 * Math.tan(THREE.MathUtils.degToRad(FOV)/2) * dist * 1.12;
+    return { w: h * camera.aspect, h };
+  }
+
+  /* ---------------- groups (built after load) ---------------- */
+  const heroGroup = new THREE.Group();      scene.add(heroGroup);
+  const narrGroup = new THREE.Group();      scene.add(narrGroup);
+  const galGroup  = new THREE.Group();      scene.add(galGroup);
+  let heroA, heroB, narrPlane, galPlanes = [];
+  const GAL_SPACING = 6;                     // depth gap between shots
+  const GAL_CAM_Z = 5;                        // fixed camera distance during gallery
+  const GAL_X = [ 0.45, -0.5, 0.4, -0.45 ];  // gentle editorial lateral offset
+  const GAL_Y = [ -0.25, 0.3, -0.2, 0.28 ];
+  const GAL_RY= [-0.12, 0.11, -0.09, 0.10];  // slight turn
+
+  /* dust particles for atmosphere */
+  let dust;
+  function buildDust(){
+    const N = isMobile ? 260 : 700;
+    const g = new THREE.BufferGeometry();
+    const p = new Float32Array(N*3);
+    for(let i=0;i<N;i++){ p[i*3]=(Math.random()-0.5)*24; p[i*3+1]=(Math.random()-0.5)*16; p[i*3+2]=-Math.random()*26+2; }
+    g.setAttribute('position', new THREE.BufferAttribute(p,3));
+    dust = new THREE.Points(g, new THREE.PointsMaterial({ color:0xffffff, size:0.012, transparent:true, opacity:0.35, depthWrite:false }));
+    scene.add(dust);
+  }
+
+  /* ---------------- loading ---------------- */
+  const manager = new THREE.LoadingManager();
+  const loader = new THREE.TextureLoader(manager);
+  const loadTex = src => new Promise(res => loader.load(src, t => {
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    t.generateMipmaps = true;
+    res(t);
+  }, undefined, () => res(null)));
+
+  manager.onProgress = (url, loaded, total) => {
+    const pct = Math.round(loaded/total*100);
+    $('loadBar').style.width = pct + '%';
+    $('loadPct').textContent = 'LOADING · ' + pct;
+  };
+
+  const SRC = {
+    a:'hero.jpg', b:'hero2.jpg',
+    g:['shot-contact.jpg','shot-lowangle.jpg','shot-window.jpg','shot-olive.jpg'],
+    n:'shot-window.jpg'
+  };
+
+  Promise.all([
+    loadTex(SRC.a), loadTex(SRC.b), loadTex(SRC.n),
+    ...SRC.g.map(loadTex)
+  ]).then(([ta, tb, tn, ...tg]) => {
+    const aspect = t => (t && t.image) ? t.image.width/t.image.height : 1.78;
+
+    heroA = makePhoto(ta, aspect(ta)); heroA.material.uniforms.uChroma.value = 0.14; heroGroup.add(heroA);
+    heroB = makePhoto(tb, aspect(tb)); heroB.material.uniforms.uChroma.value = 0.14; heroGroup.add(heroB);
+
+    narrPlane = makePhoto(tn, aspect(tn)); narrPlane.material.uniforms.uExposure.value = 0.5; narrGroup.add(narrPlane);
+    narrPlane.position.z = -1.5;
+
+    tg.forEach((t,i) => {
+      const m = makePhoto(t, aspect(t));
+      const h = 3.0, w = h * aspect(t);
+      m.scale.set(w, h, 1); m.material.uniforms.uPlaneA.value = w/h;
+      m.position.set(GAL_X[i], GAL_Y[i], -i*GAL_SPACING);  // stacked in depth, local space
+      m.rotation.y = GAL_RY[i];
+      galPlanes.push(m); galGroup.add(m);
+    });
+
+    buildDust();
+    layout();
+    // reveal
+    setTimeout(()=>$('loader').classList.add('hidden'), 350);
+    compute();
+    if(!running){ running = true; requestAnimationFrame(tick); }
+  });
+
+  /* ---------------- layout (sizes that depend on viewport) ---------------- */
+  function layout(){
+    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    if(heroA){ const c = coverSize(6); setPlaneSize(heroA, c.w, c.h); setPlaneSize(heroB, c.w, c.h); }
+    if(narrPlane){ const c = coverSize(7.5); setPlaneSize(narrPlane, c.w, c.h); }
+  }
+
+  /* ---------------- scroll state ---------------- */
+  let pHero=0, pNar=0, pGal=0;          // raw section progress
+  let sHero=0, sNar=0, sGal=0;          // smoothed
+  let phase = 'hero';                    // which chapter owns the viewport
+  function sectionP(el){
+    const max = el.offsetHeight - innerHeight;
+    const top = el.getBoundingClientRect().top;
+    return max > 0 ? clamp(-top, 0, max)/max : 0;
+  }
+  function midIn(el){ const r = el.getBoundingClientRect(); const m = innerHeight*0.5; return r.top <= m && r.bottom >= m; }
+  function compute(){
+    pHero = sectionP($('heroChap'));
+    pNar  = sectionP($('narrativeChap'));
+    pGal  = sectionP($('galleryChap'));
+    if(midIn($('heroChap'))) phase = 'hero';
+    else if(midIn($('narrativeChap'))) phase = 'narr';
+    else if(midIn($('galleryChap'))) phase = 'gal';
+    // (splice gaps keep the previous phase, whose photos have already faded out)
+    const docMax = document.documentElement.scrollHeight - innerHeight;
+    $('progress').style.width = (clamp(docMax>0?scrollY/docMax:0)*100).toFixed(2) + '%';
+    updateDOM();
+  }
+
+  /* ---------------- DOM overlays ---------------- */
+  const drumWords = [...document.querySelectorAll('#heroDrum .word')];
+  const paras = [...document.querySelectorAll('.narrative-p')];
+  const caps = [...document.querySelectorAll('.gcap')];
+  const heroCopy = $('heroCopy'), heroHint = $('heroHint');
+
+  function updateDOM(){
+    // hero drum
+    const f = pHero * (drumWords.length-1);
+    drumWords.forEach((w,i)=>{
+      const d = i - f;
+      w.style.opacity = Math.max(0, 1 - Math.abs(d)*0.85).toFixed(3);
+      w.style.transform = `translate3d(0, ${(d*42).toFixed(2)}%, ${(-d*5).toFixed(2)}px) rotateX(${(d*65).toFixed(2)}deg)`;
+    });
+    heroCopy.style.opacity = (1 - remap(pHero,0.74,0.96)).toFixed(3);
+    heroCopy.style.transform = `translateY(calc(-50% - ${(remap(pHero,0.74,1)*42).toFixed(1)}px))`;
+    heroHint.classList.toggle('hide', pHero > 0.03);
+
+    // narrative color-fill
+    const count = paras.length;
+    paras.forEach((el,index)=>{
+      const stepW = 1/count, center = index*stepW + stepW/2;
+      const proximity = clamp(1 - Math.abs(pNar-center)/0.22);
+      if(REDUCED){ el.classList.toggle('active', proximity>0.6); return; }
+      el.style.opacity = (0.12 + proximity*0.88).toFixed(3);
+      el.style.filter = `blur(${((1-proximity)*6).toFixed(1)}px)`;
+      if(proximity>0.55){ el.classList.add('active'); el.style.transform = `translate3d(${(proximity*6).toFixed(1)}px,0,0) scale(1.015)`; }
+      else { el.classList.remove('active'); el.style.transform = 'none'; }
+    });
+  }
+
+  /* ---------------- mouse parallax ---------------- */
+  const mouse = { x:0, y:0, tx:0, ty:0 };
+  if(!isMobile && !REDUCED){
+    addEventListener('pointermove', e => { mouse.tx = (e.clientX/innerWidth - 0.5); mouse.ty = (e.clientY/innerHeight - 0.5); });
+  }
+
+  /* ---------------- render loop ---------------- */
+  let running = false, t0 = performance.now();
+  function tick(now){
+    requestAnimationFrame(tick);
+    const time = (now - t0) / 1000;
+
+    // smooth section progress
+    const k = REDUCED ? 1 : 0.085;
+    sHero += (pHero - sHero)*k; sNar += (pNar - sNar)*k; sGal += (pGal - sGal)*k;
+    mouse.x += (mouse.tx - mouse.x)*0.06; mouse.y += (mouse.ty - mouse.y)*0.06;
+
+    // visibility is owned by the active chapter — no cross-bleed between sections
+    const inGal = phase === 'gal';
+    heroGroup.visible = phase === 'hero';
+    narrGroup.visible = phase === 'narr';
+    galGroup.visible  = phase === 'gal';
+
+    // ---- HERO: push in, crossfade A->B, then recede & blur ----
+    if(heroA){
+      const zin = remap(sHero,0,0.5), off = remap(sHero,0.5,1);
+      heroGroup.position.z = -1.6*zin - 1.2*off;          // camera-relative push then recede feel
+      heroGroup.position.y = 0;
+      const cross = remap(sHero,0.44,0.70);
+      heroA.material.uniforms.uOpacity.value = (1 - remap(sHero,0.45,0.70)) * (1 - remap(sHero,0.80,0.99));
+      heroA.material.uniforms.uFocus.value = remap(sHero,0.40,0.78);
+      heroB.material.uniforms.uOpacity.value = cross * (1 - remap(sHero,0.82,0.99));
+      heroB.material.uniforms.uFocus.value = (1 - cross)*0.8 + remap(sHero,0.85,1.0);
+      heroB.position.z = -0.05;
+    }
+
+    // ---- NARRATIVE: dark, slowly breathing backdrop ----
+    if(narrPlane){
+      const vis = Math.min(remap(sNar,0,0.12), 1 - remap(sNar,0.88,1));
+      narrPlane.material.uniforms.uOpacity.value = clamp(vis) * 0.9;
+      narrPlane.material.uniforms.uFocus.value = 0.55;
+      narrPlane.position.x = Math.sin(time*0.15)*0.15;
+    }
+
+    // ---- GALLERY: photos travel forward through depth to a fixed framing ----
+    if(galPlanes.length){
+      const N = galPlanes.length;
+      // group offset slides the whole stack toward the camera; plane i is framed (world z ~0) at off = i*SPACING
+      const off = lerp(-GAL_SPACING, (N-1)*GAL_SPACING + GAL_SPACING, smooth(sGal));
+      galGroup.position.z = off;
+      galPlanes.forEach((m,i)=>{
+        const worldZ = -i*GAL_SPACING + off;               // 0 = framed sweet-spot, <0 = far behind, >0 = past camera
+        const focus = clamp((Math.abs(worldZ) - 1.4)/5.5);  // sharp at the sweet spot, blurred in depth
+        m.material.uniforms.uFocus.value = focus;
+        const vis = clamp(1 - remap(worldZ, 2.6, 4.6));      // fade out as it nears / passes the camera
+        m.material.uniforms.uOpacity.value = vis;
+        m.rotation.y = GAL_RY[i] + mouse.x*0.05;
+        m.position.x = GAL_X[i] + mouse.x*0.25;
+        if(caps[i]) caps[i].style.opacity = (clamp(1 - focus*1.7) * vis).toFixed(3);
+      });
+      if(inGal){
+        camera.position.z += (GAL_CAM_Z - camera.position.z) * 0.12;
+        camera.position.x += (mouse.x*0.45 - camera.position.x) * 0.06;
+        camera.position.y += (mouse.y*-0.3 - camera.position.y) * 0.06;
+        camera.lookAt(mouse.x*0.2, mouse.y*-0.15, 0);
+      }
+    }
+
+    // camera for hero / narrative chapters
+    if(!inGal){
+      const baseZ = 6;
+      camera.position.z += (baseZ - camera.position.z) * 0.1;
+      camera.position.x += (mouse.x*0.4 - camera.position.x) * 0.06;
+      camera.position.y += (mouse.y*-0.25 - camera.position.y) * 0.06;
+      camera.lookAt(mouse.x*0.2, mouse.y*-0.1, 0);
+    }
+
+    if(dust){ dust.rotation.y = time*0.015; dust.position.x = Math.sin(time*0.1)*0.4; }
+
+    renderer.render(scene, camera);
+  }
+
+  /* ---------------- events ---------------- */
+  addEventListener('scroll', compute, { passive:true });
+  addEventListener('resize', ()=>{ layout(); compute(); });
+  const io = new IntersectionObserver(es => es.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('in'); }), { threshold:0.2 });
+  io.observe($('outroReveal'));
+  </script>
+</body>
+</html>
