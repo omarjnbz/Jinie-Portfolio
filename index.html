@@ -430,8 +430,14 @@ python3 -m http.server 8098
     // focal points (where the subject sits) so portrait crops keep the person in frame
     const setFocal = (m,x,y)=>m.material.uniforms.uFocal.value.set(x,y);
 
-    heroA = makePhoto(ta, aspect(ta)); heroA.material.uniforms.uChroma.value = 0.14; setFocal(heroA,0.66,0.46); heroGroup.add(heroA);
-    heroB = makePhoto(tb, aspect(tb)); heroB.material.uniforms.uChroma.value = 0.14; setFocal(heroB,0.62,0.40); heroGroup.add(heroB);
+    heroA = makePhoto(ta, aspect(ta));
+    heroA.material.uniforms.uChroma.value = isMobile ? 0 : 0.14; // no chroma on mobile — plane edges overflow and fringe
+    setFocal(heroA, 0.66, 0.46);
+    heroGroup.add(heroA);
+    heroB = makePhoto(tb, aspect(tb));
+    heroB.material.uniforms.uChroma.value = isMobile ? 0 : 0.14;
+    setFocal(heroB, 0.62, 0.40);
+    heroGroup.add(heroB);
 
     narrPlane = makePhoto(tn, aspect(tn)); narrPlane.material.uniforms.uExposure.value = 0.5; setFocal(narrPlane,0.34,0.40); narrGroup.add(narrPlane);
     narrPlane.position.z = -1.5;
@@ -460,7 +466,29 @@ python3 -m http.server 8098
     camera.aspect = vpW()/vpH(); camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
     renderer.setSize(vpW(), vpH());
-    if(heroA){ const c = coverSize(6); setPlaneSize(heroA, c.w, c.h); setPlaneSize(heroB, c.w, c.h); }
+    if(heroA){
+      if(isMobile){
+        // On mobile portrait, the landscape photos are x-cropped (the full image height is shown).
+        // The subject faces sit at y≈0.22 (hero.jpg) / y≈0.38 (hero2.jpg) of the image height.
+        // Zooming the plane 1.6× crops into a smaller region of the image and combined with
+        // a focal.y shift encoded in the UV we pull the face into the center of the viewport.
+        // We achieve the vertical offset by adjusting the plane's position.y in world space:
+        // shifting it UP pushes the visible texture region DOWN → face comes into view.
+        const c = coverSize(6);
+        const zoom = 1.45;
+        [heroA, heroB].forEach(m => {
+          m.scale.set(c.w * zoom, c.h * zoom, 1);
+          m.material.uniforms.uPlaneA.value = (c.w * zoom) / (c.h * zoom); // correct aspect ratio
+        });
+        // Shift plane down in world space so the cropped view centres on the face region
+        // (positive y in Three.js = up; moving plane up means we see the top/face area more)
+        heroA.position.y =  0.8;  // hero.jpg face high up (y≈0.22) — lift plane
+        heroB.position.y =  0.2;  // hero2.jpg face more centred (y≈0.38) — gentle lift
+      } else {
+        const c = coverSize(6); setPlaneSize(heroA, c.w, c.h); setPlaneSize(heroB, c.w, c.h);
+        heroA.position.y = 0; heroB.position.y = 0;
+      }
+    }
     if(narrPlane){ const c = coverSize(7.5); setPlaneSize(narrPlane, c.w, c.h); }
     // Gallery: full-bleed cover planes on mobile (portrait viewport has no room for floating cards);
     // floating photo-aspect cards on desktop.
@@ -552,16 +580,26 @@ python3 -m http.server 8098
     narrGroup.visible = phase === 'narr';
     galGroup.visible  = phase === 'gal';
 
-    // ---- HERO: push in, crossfade A->B, then recede & blur ----
+    // ---- HERO: push in, crossfade, then recede & blur ----
+    // Mobile: start with B (hero2 — tight face close-up) → crossfade to A (full body)
+    // Desktop: start with A (full body wide) → crossfade to B
     if(heroA){
       const zin = remap(sHero,0,0.5), off = remap(sHero,0.5,1);
-      heroGroup.position.z = -1.6*zin - 1.2*off;          // camera-relative push then recede feel
+      heroGroup.position.z = -1.6*zin - 1.2*off;
       heroGroup.position.y = 0;
       const cross = remap(sHero,0.44,0.70);
-      heroA.material.uniforms.uOpacity.value = (1 - remap(sHero,0.45,0.70)) * (1 - remap(sHero,0.80,0.99));
-      heroA.material.uniforms.uFocus.value = remap(sHero,0.40,0.78);
-      heroB.material.uniforms.uOpacity.value = cross * (1 - remap(sHero,0.82,0.99));
-      heroB.material.uniforms.uFocus.value = (1 - cross)*0.8 + remap(sHero,0.85,1.0);
+      if(isMobile){
+        // B is primary (face close-up), fades out; A comes in at cross then both fade
+        heroB.material.uniforms.uOpacity.value = (1 - remap(sHero,0.45,0.70)) * (1 - remap(sHero,0.80,0.99));
+        heroB.material.uniforms.uFocus.value = remap(sHero,0.40,0.78);
+        heroA.material.uniforms.uOpacity.value = cross * (1 - remap(sHero,0.82,0.99));
+        heroA.material.uniforms.uFocus.value = (1 - cross)*0.8 + remap(sHero,0.85,1.0);
+      } else {
+        heroA.material.uniforms.uOpacity.value = (1 - remap(sHero,0.45,0.70)) * (1 - remap(sHero,0.80,0.99));
+        heroA.material.uniforms.uFocus.value = remap(sHero,0.40,0.78);
+        heroB.material.uniforms.uOpacity.value = cross * (1 - remap(sHero,0.82,0.99));
+        heroB.material.uniforms.uFocus.value = (1 - cross)*0.8 + remap(sHero,0.85,1.0);
+      }
       heroB.position.z = -0.05;
     }
 
