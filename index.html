@@ -431,12 +431,12 @@ python3 -m http.server 8098
     const setFocal = (m,x,y)=>m.material.uniforms.uFocal.value.set(x,y);
 
     heroA = makePhoto(ta, aspect(ta));
-    heroA.material.uniforms.uChroma.value = isMobile ? 0 : 0.14; // no chroma on mobile — plane edges overflow and fringe
-    setFocal(heroA, 0.66, 0.46);
+    heroA.material.uniforms.uChroma.value = isMobile ? 0 : 0.14;
+    setFocal(heroA, isMobile ? 0.62 : 0.66, 0.46);   // mobile: face at x≈0.62 in hero.jpg
     heroGroup.add(heroA);
     heroB = makePhoto(tb, aspect(tb));
     heroB.material.uniforms.uChroma.value = isMobile ? 0 : 0.14;
-    setFocal(heroB, 0.62, 0.40);
+    setFocal(heroB, 0.62, 0.42);   // hero2.jpg: face at x≈0.62 (slightly right of centre)
     heroGroup.add(heroB);
 
     narrPlane = makePhoto(tn, aspect(tn)); narrPlane.material.uniforms.uExposure.value = 0.5; setFocal(narrPlane,0.34,0.40); narrGroup.add(narrPlane);
@@ -480,10 +480,16 @@ python3 -m http.server 8098
           m.scale.set(c.w * zoom, c.h * zoom, 1);
           m.material.uniforms.uPlaneA.value = (c.w * zoom) / (c.h * zoom); // correct aspect ratio
         });
-        // Shift plane down in world space so the cropped view centres on the face region
-        // (positive y in Three.js = up; moving plane up means we see the top/face area more)
-        heroA.position.y =  0.8;  // hero.jpg face high up (y≈0.22) — lift plane
-        heroB.position.y =  0.2;  // hero2.jpg face more centred (y≈0.38) — gentle lift
+        // Shift plane in world space to centre the face vertically.
+        // hero2.jpg face is at y≈0.42 (slightly above centre of image).
+        // hero.jpg face is at y≈0.22 (near top — needs bigger lift).
+        // uFocal.x handles horizontal centering via the cover shader.
+        // Vertical centering: position.y shifts which part of image is at screen center.
+        // hero2.jpg face is at image_y≈0.40; formula: pos_y = half_h - 0.40*plane_h ≈ 0.60
+        heroB.position.y =  0.62;
+        // hero.jpg face is at image_y≈0.22; pos_y = half_h - 0.22*plane_h ≈ 2.10
+        // but 2.10 overshoots — cap at 1.5 to keep lower body in frame as context
+        heroA.position.y =  1.5;
       } else {
         const c = coverSize(6); setPlaneSize(heroA, c.w, c.h); setPlaneSize(heroB, c.w, c.h);
         heroA.position.y = 0; heroB.position.y = 0;
