@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Jinie Bhatnagar — DJ & Producer · Delhi → The World</title>
   <meta name="description" content="DJ & Producer Jinie Bhatnagar. House · Afro House · Progressive · Deep House. Delhi → The World." />
 
@@ -69,7 +69,7 @@
     .chap-narrative { --h: 380vh; }
     .chap-gallery { --h: 620vh; }
     .stage {
-      position: sticky; top: 0; height: 100vh; width: 100%; overflow: hidden;
+      position: sticky; top: 0; height: 100vh; height: 100dvh; width: 100%; overflow: hidden;
       background: transparent; /* WebGL shows through */
     }
     /* gentle vignette for depth */
@@ -77,7 +77,7 @@
       content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
       background: radial-gradient(circle at 50% 50%, transparent 38%, rgba(6,6,6,0.55) 100%);
     }
-    .splice { height: 16vh; }
+    .splice { height: 16vh; height: 16dvh; }
 
     /* ===== Hero typography ===== */
     .copy {
@@ -91,7 +91,7 @@
     .drum .word { grid-area: 1 / 1; transform-style: preserve-3d; backface-visibility: hidden; will-change: transform, opacity; }
 
     /* ===== Narrative ===== */
-    .narrative-wrapper { position: absolute; left: calc(var(--rail) + 2rem); top: 52%; transform: translateY(-50%); max-width: clamp(290px,38vw,560px); z-index: 5; display: flex; flex-direction: column; gap: 2.5rem; }
+    .narrative-wrapper { position: absolute; left: calc(var(--rail) + 2rem); top: 52%; transform: translateY(-50%); max-width: clamp(240px,38vw,560px); z-index: 5; display: flex; flex-direction: column; gap: 2.5rem; }
     .narrative-meta { font-size: 0.7rem; letter-spacing: 0.3em; color: rgba(255,255,255,0.3); text-transform: uppercase; display: flex; align-items: center; gap: 0.75rem; }
     .narrative-meta::before { content: ""; width: 5px; height: 5px; background: #ff3b30; border-radius: 50%; }
     .narrative-block { display: flex; flex-direction: column; gap: 2.25rem; }
@@ -113,7 +113,7 @@
     @keyframes bob { 0%,100%{transform:translateY(0);opacity:.3} 50%{transform:translateY(6px);opacity:.8} }
 
     /* ===== Outro ===== */
-    .outro { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1rem; padding: 2rem; position: relative; z-index: 10; background: linear-gradient(180deg, transparent, var(--bg) 30%, var(--bg)); }
+    .outro { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1rem; padding: 2rem; position: relative; z-index: 10; background: linear-gradient(180deg, transparent, var(--bg) 30%, var(--bg)); }
     .end-stamp { font-size: clamp(0.65rem,0.8vw,0.75rem); letter-spacing: 0.5em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 0.5rem; }
     .outro h2 { font-family: var(--font-serif); font-size: clamp(2rem,5vw,4.5rem); font-weight: 300; letter-spacing: -0.01em; }
     .outro h2 em { font-style: italic; }
@@ -130,9 +130,33 @@
 
     @media (max-width: 768px) {
       :root { --rail: 1.5rem; }
-      .editorial-frame { margin: 0.75rem; }
-      .chap-hero { --h: 240vh; } .chap-narrative { --h: 300vh; } .chap-gallery { --h: 480vh; }
-      .copy, .narrative-wrapper { padding-left: 0; }
+      html { scroll-behavior: auto; }                              /* J1: native momentum, no forced repaints */
+      .editorial-frame {
+        margin: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+                max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left)); /* C2 */
+      }
+      .chap-hero { --h: 240dvh; } .chap-narrative { --h: 300dvh; } .chap-gallery { --h: 480dvh; } /* C1 */
+      /* C7: bound copy on BOTH sides so type wraps inside the frame instead of sizing to max-content */
+      .copy {
+        padding-left: 0;
+        left: max(var(--rail), env(safe-area-inset-left));
+        right: max(var(--rail), env(safe-area-inset-right));
+      }
+      .narrative-wrapper {
+        padding-left: 0;
+        left: calc(max(var(--rail), env(safe-area-inset-left)) + 1rem);
+        right: max(var(--rail), env(safe-area-inset-right));
+        max-width: none;
+      }
+      .kicker { letter-spacing: 0.12em; }                          /* C3: tighter so it stays one line */
+      .word { white-space: normal; overflow-wrap: break-word; font-size: clamp(1.9rem, 8.4vw, 3.2rem); } /* C6: fits the frame */
+      .gcap { white-space: nowrap; letter-spacing: 0.12em; font-size: 0.6rem; max-width: none; } /* single line so fading captions don't stack/overlap */
+      .narrative-meta { letter-spacing: 0.15em; font-size: 0.65rem; }
+      .gcaps, .scroll-hint {
+        left: calc(max(var(--rail), env(safe-area-inset-left)) + 2rem);
+        bottom: calc(4rem + env(safe-area-inset-bottom));          /* C5 */
+      }
+      .scroll-hint { letter-spacing: 0.2em; }                      /* C9 */
     }
     @media (prefers-reduced-motion: reduce) {
       .narrative-p { transition: opacity .3s ease; filter: none !important; }
@@ -260,16 +284,21 @@ python3 -m http.server 8098
   const isMobile = matchMedia('(max-width: 768px)').matches || /Mobi|Android/i.test(navigator.userAgent);
   const $ = id => document.getElementById(id);
 
+  // true visible viewport (mobile address bar aware)
+  const vv = window.visualViewport;
+  const vpW = () => vv ? vv.width  : innerWidth;
+  const vpH = () => vv ? vv.height : innerHeight;
+
   /* ---------------- renderer / scene / camera ---------------- */
   const canvas = $('gl');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true, powerPreference: isMobile ? 'low-power' : 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(vpW(), vpH());
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace; // shader does the sRGB encode
 
   const scene = new THREE.Scene();
   const FOV = 42;
-  const camera = new THREE.PerspectiveCamera(FOV, innerWidth/innerHeight, 0.1, 200);
+  const camera = new THREE.PerspectiveCamera(FOV, vpW()/vpH(), 0.1, 200);
   camera.position.set(0, 0, 6);
 
   /* ---------------- photo shader (cover-fit + DOF blur + chroma) ---------------- */
@@ -282,10 +311,12 @@ python3 -m http.server 8098
     varying vec2 vUv;
     uniform sampler2D uTex;
     uniform float uOpacity, uFocus, uImgA, uPlaneA, uExposure, uChroma;
+    uniform vec2 uFocal;            // subject focal point (0..1); crop biases toward it
     const float R = 0.010;          // max blur radius (uv)
     vec2 cover(vec2 uv){
-      if(uImgA > uPlaneA){ float f = uPlaneA/uImgA; uv.x = (uv.x-0.5)*f + 0.5; }
-      else               { float f = uImgA/uPlaneA; uv.y = (uv.y-0.5)*f + 0.5; }
+      // crop the overflowing axis around the focal point (clamped so we never sample past the image)
+      if(uImgA > uPlaneA){ float f = uPlaneA/uImgA; float c = clamp(uFocal.x, f*0.5, 1.0-f*0.5); uv.x = (uv.x-0.5)*f + c; }
+      else               { float f = uImgA/uPlaneA; float c = clamp(uFocal.y, f*0.5, 1.0-f*0.5); uv.y = (uv.y-0.5)*f + c; }
       return uv;
     }
     vec3 sampleAt(vec2 uv){
@@ -328,7 +359,8 @@ python3 -m http.server 8098
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         uTex:{value:tex}, uOpacity:{value:0}, uFocus:{value:0},
-        uImgA:{value:imgA}, uPlaneA:{value:1}, uExposure:{value:1.06}, uChroma:{value:0.0}
+        uImgA:{value:imgA}, uPlaneA:{value:1}, uExposure:{value:1.06}, uChroma:{value:0.0},
+        uFocal:{value:new THREE.Vector2(0.5,0.5)}
       },
       vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false
     });
@@ -357,7 +389,7 @@ python3 -m http.server 8098
   /* dust particles for atmosphere */
   let dust;
   function buildDust(){
-    const N = isMobile ? 260 : 700;
+    const N = isMobile ? (REDUCED ? 0 : 120) : 700;
     const g = new THREE.BufferGeometry();
     const p = new Float32Array(N*3);
     for(let i=0;i<N;i++){ p[i*3]=(Math.random()-0.5)*24; p[i*3+1]=(Math.random()-0.5)*16; p[i*3+2]=-Math.random()*26+2; }
@@ -395,18 +427,23 @@ python3 -m http.server 8098
   ]).then(([ta, tb, tn, ...tg]) => {
     const aspect = t => (t && t.image) ? t.image.width/t.image.height : 1.78;
 
-    heroA = makePhoto(ta, aspect(ta)); heroA.material.uniforms.uChroma.value = 0.14; heroGroup.add(heroA);
-    heroB = makePhoto(tb, aspect(tb)); heroB.material.uniforms.uChroma.value = 0.14; heroGroup.add(heroB);
+    // focal points (where the subject sits) so portrait crops keep the person in frame
+    const setFocal = (m,x,y)=>m.material.uniforms.uFocal.value.set(x,y);
 
-    narrPlane = makePhoto(tn, aspect(tn)); narrPlane.material.uniforms.uExposure.value = 0.5; narrGroup.add(narrPlane);
+    heroA = makePhoto(ta, aspect(ta)); heroA.material.uniforms.uChroma.value = 0.14; setFocal(heroA,0.66,0.46); heroGroup.add(heroA);
+    heroB = makePhoto(tb, aspect(tb)); heroB.material.uniforms.uChroma.value = 0.14; setFocal(heroB,0.62,0.40); heroGroup.add(heroB);
+
+    narrPlane = makePhoto(tn, aspect(tn)); narrPlane.material.uniforms.uExposure.value = 0.5; setFocal(narrPlane,0.34,0.40); narrGroup.add(narrPlane);
     narrPlane.position.z = -1.5;
 
+    const GAL_FOCAL = [ [0.46,0.40], [0.45,0.40], [0.34,0.42], [0.50,0.40] ]; // contact, lowangle, window, olive
     tg.forEach((t,i) => {
       const m = makePhoto(t, aspect(t));
       const h = 3.0, w = h * aspect(t);
       m.scale.set(w, h, 1); m.material.uniforms.uPlaneA.value = w/h;
       m.position.set(GAL_X[i], GAL_Y[i], -i*GAL_SPACING);  // stacked in depth, local space
       m.rotation.y = GAL_RY[i];
+      setFocal(m, GAL_FOCAL[i][0], GAL_FOCAL[i][1]);
       galPlanes.push(m); galGroup.add(m);
     });
 
@@ -420,10 +457,19 @@ python3 -m http.server 8098
 
   /* ---------------- layout (sizes that depend on viewport) ---------------- */
   function layout(){
-    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
+    camera.aspect = vpW()/vpH(); camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
+    renderer.setSize(vpW(), vpH());
     if(heroA){ const c = coverSize(6); setPlaneSize(heroA, c.w, c.h); setPlaneSize(heroB, c.w, c.h); }
     if(narrPlane){ const c = coverSize(7.5); setPlaneSize(narrPlane, c.w, c.h); }
+    // Gallery: full-bleed cover planes on mobile (portrait viewport has no room for floating cards);
+    // floating photo-aspect cards on desktop.
+    if(galPlanes.length){
+      galPlanes.forEach(m => {
+        if(isMobile){ const c = coverSize(8); setPlaneSize(m, c.w, c.h); m.position.y = 0; }  // sized to stay full-bleed across the depth range
+        else { const a = m.userData.imgA; setPlaneSize(m, 3.0 * a, 3.0); }
+      });
+    }
   }
 
   /* ---------------- scroll state ---------------- */
@@ -431,11 +477,11 @@ python3 -m http.server 8098
   let sHero=0, sNar=0, sGal=0;          // smoothed
   let phase = 'hero';                    // which chapter owns the viewport
   function sectionP(el){
-    const max = el.offsetHeight - innerHeight;
+    const max = el.offsetHeight - vpH();
     const top = el.getBoundingClientRect().top;
     return max > 0 ? clamp(-top, 0, max)/max : 0;
   }
-  function midIn(el){ const r = el.getBoundingClientRect(); const m = innerHeight*0.5; return r.top <= m && r.bottom >= m; }
+  function midIn(el){ const r = el.getBoundingClientRect(); const m = vpH()*0.5; return r.top <= m && r.bottom >= m; }
   function compute(){
     pHero = sectionP($('heroChap'));
     pNar  = sectionP($('narrativeChap'));
@@ -444,7 +490,7 @@ python3 -m http.server 8098
     else if(midIn($('narrativeChap'))) phase = 'narr';
     else if(midIn($('galleryChap'))) phase = 'gal';
     // (splice gaps keep the previous phase, whose photos have already faded out)
-    const docMax = document.documentElement.scrollHeight - innerHeight;
+    const docMax = document.documentElement.scrollHeight - vpH();
     $('progress').style.width = (clamp(docMax>0?scrollY/docMax:0)*100).toFixed(2) + '%';
     updateDOM();
   }
@@ -482,8 +528,11 @@ python3 -m http.server 8098
 
   /* ---------------- mouse parallax ---------------- */
   const mouse = { x:0, y:0, tx:0, ty:0 };
-  if(!isMobile && !REDUCED){
-    addEventListener('pointermove', e => { mouse.tx = (e.clientX/innerWidth - 0.5); mouse.ty = (e.clientY/innerHeight - 0.5); });
+  if(!REDUCED){
+    addEventListener('pointermove', e => {
+      if(e.pointerType === 'touch') return;        // mouse/pen only — never on touch
+      mouse.tx = (e.clientX/innerWidth - 0.5); mouse.ty = (e.clientY/innerHeight - 0.5);
+    }, { passive:true });
   }
 
   /* ---------------- render loop ---------------- */
@@ -528,17 +577,24 @@ python3 -m http.server 8098
     if(galPlanes.length){
       const N = galPlanes.length;
       // group offset slides the whole stack toward the camera; plane i is framed (world z ~0) at off = i*SPACING
-      const off = lerp(-GAL_SPACING, (N-1)*GAL_SPACING + GAL_SPACING, smooth(sGal));
+      // mobile: full-bleed planes start nearer + fade only at the camera so the next plane is already filling
+      const off = isMobile
+        ? lerp(-3, (N-1)*GAL_SPACING + 3, smooth(sGal))
+        : lerp(-GAL_SPACING, (N-1)*GAL_SPACING + GAL_SPACING, smooth(sGal));
       galGroup.position.z = off;
       galPlanes.forEach((m,i)=>{
         const worldZ = -i*GAL_SPACING + off;               // 0 = framed sweet-spot, <0 = far behind, >0 = past camera
-        const focus = clamp((Math.abs(worldZ) - 1.4)/5.5);  // sharp at the sweet spot, blurred in depth
+        const dist0 = Math.abs(worldZ);
+        const focus = isMobile ? 0 : clamp((dist0 - 1.4)/5.5);  // DOF off on mobile (fill-rate)
         m.material.uniforms.uFocus.value = focus;
-        const vis = clamp(1 - remap(worldZ, 2.6, 4.6));      // fade out as it nears / passes the camera
+        const vis = isMobile ? clamp(1 - remap(worldZ, 3.2, 4.8)) : clamp(1 - remap(worldZ, 2.6, 4.6));
         m.material.uniforms.uOpacity.value = vis;
-        m.rotation.y = GAL_RY[i] + mouse.x*0.05;
-        m.position.x = GAL_X[i] + mouse.x*0.25;
-        if(caps[i]) caps[i].style.opacity = (clamp(1 - focus*1.7) * vis).toFixed(3);
+        m.rotation.y = (isMobile ? 0 : GAL_RY[i]) + (isMobile ? 0 : mouse.x*0.05);
+        m.position.x = (isMobile ? 0 : GAL_X[i]) + (isMobile ? 0 : mouse.x*0.25);
+        // caption shows only for the plane near the framed sweet-spot — driven by proximity, not DOF
+        // (DOF is disabled on mobile, so keying off `focus` would light every caption at once)
+        const capProx = clamp(1 - (dist0 - 0.6)/2.0);
+        if(caps[i]) caps[i].style.opacity = (capProx * vis).toFixed(3);
       });
       if(inGal){
         camera.position.z += (GAL_CAM_Z - camera.position.z) * 0.12;
@@ -564,7 +620,17 @@ python3 -m http.server 8098
 
   /* ---------------- events ---------------- */
   addEventListener('scroll', compute, { passive:true });
-  addEventListener('resize', ()=>{ layout(); compute(); });
+  let lastW = innerWidth, rT;
+  function onViewportChange(){
+    clearTimeout(rT);
+    rT = setTimeout(()=>{
+      if(innerWidth !== lastW){ lastW = innerWidth; layout(); }   // width changed -> full relayout
+      else { camera.aspect = vpW()/vpH(); camera.updateProjectionMatrix(); renderer.setSize(vpW(), vpH()); } // address-bar height-only -> cheap
+      compute();
+    }, 120);
+  }
+  addEventListener('resize', onViewportChange, { passive:true });
+  if(vv) vv.addEventListener('resize', onViewportChange, { passive:true });
   const io = new IntersectionObserver(es => es.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('in'); }), { threshold:0.2 });
   io.observe($('outroReveal'));
   </script>
